@@ -2,11 +2,6 @@ package com.theeasiestway.opus
 
 import android.util.Log
 
-
-//
-// Created by Loboda Alexey on 21.05.2020.
-//
-
 class Opus {
 
     companion object {
@@ -14,66 +9,100 @@ class Opus {
         val TAG = "CodecOpus"
 
         init {
-            try { System.loadLibrary("easyopus") }
-            catch (e: Exception) { Log.e(TAG, "Couldn't load opus library: $e") }
+            try {
+                System.loadLibrary("easyopus")
+            } catch (e: Exception) {
+                Log.e(TAG, "Couldn't load opus library: $e")
+            }
         }
     }
 
-    //
-    // Encoder
-    //
+    // pointer to codec instance
+    private var codecPtr: Long = 0
 
-    fun encoderInit(sampleRate: Constants.SampleRate, channels: Constants.Channels, application: Constants.Application): Int {
-        return encoderInit(sampleRate.v, channels.v, application.v)
+    init {
+        codecPtr = createCodec()
     }
-    private external fun encoderInit(sampleRate: Int, numChannels: Int, application: Int): Int
+
+    private external fun createCodec(): Long
+    private external fun destroyCodec(codecPtr: Long)
+
+    fun release() {
+        destroyCodec(codecPtr)
+    }
+
+    // Encoder
+    fun encoderInit(sampleRate: Constants.SampleRate, channels: Constants.Channels, application: Constants.Application): Int {
+        return encoderInit(codecPtr, sampleRate.v, channels.v, application.v)
+    }
+
+    private external fun encoderInit(codecPtr: Long, sampleRate: Int, numChannels: Int, application: Int): Int
 
     fun encoderSetBitrate(bitrate: Constants.Bitrate): Int {
-        return encoderSetBitrate(bitrate.v)
+        return encoderSetBitrate(codecPtr, bitrate.v)
     }
-    private external fun encoderSetBitrate(bitrate: Int): Int
+
+    private external fun encoderSetBitrate(codecPtr: Long, bitrate: Int): Int
 
     fun encoderSetComplexity(complexity: Constants.Complexity): Int {
-        return encoderSetComplexity(complexity.v)
+        return encoderSetComplexity(codecPtr, complexity.v)
     }
-    private external fun encoderSetComplexity(complexity: Int): Int
+
+    private external fun encoderSetComplexity(codecPtr: Long, complexity: Int): Int
 
     fun encode(bytes: ByteArray, frameSize: Constants.FrameSize): ByteArray? {
-        return encode(bytes, frameSize.v)
+        return encode(codecPtr, bytes, frameSize.v)
     }
-    private external fun encode(bytes: ByteArray, frameSize: Int): ByteArray?
+
+    private external fun encode(codecPtr: Long, bytes: ByteArray, frameSize: Int): ByteArray?
 
     fun encode(shorts: ShortArray, frameSize: Constants.FrameSize): ShortArray? {
-        return encode(shorts, frameSize.v)
+        return encode(codecPtr, shorts, frameSize.v)
     }
-    private external fun encode(shorts: ShortArray, frameSize: Int): ShortArray?
-    external fun encoderRelease()
 
-    //
+    private external fun encode(codecPtr: Long, shorts: ShortArray, frameSize: Int): ShortArray?
+
+    fun encoderRelease() {
+        encoderRelease(codecPtr)
+    }
+
+    private external fun encoderRelease(codecPtr: Long)
+
     // Decoder
-    //
-
     fun decoderInit(sampleRate: Constants.SampleRate, channels: Constants.Channels): Int {
-        return decoderInit(sampleRate.v, channels.v)
+        return decoderInit(codecPtr, sampleRate.v, channels.v)
     }
-    private external fun decoderInit(sampleRate: Int, numChannels: Int): Int
+
+    private external fun decoderInit(codecPtr: Long, sampleRate: Int, numChannels: Int): Int
 
     fun decode(bytes: ByteArray, frameSize: Constants.FrameSize, fec: Int = 0): ByteArray? {
-        return decode(bytes, frameSize.v, fec)
+        return decode(codecPtr, bytes, frameSize.v, fec)
     }
-    private external fun decode(bytes: ByteArray, frameSize: Int, fec: Int): ByteArray?
+
+    private external fun decode(codecPtr: Long, bytes: ByteArray, frameSize: Int, fec: Int): ByteArray?
 
     fun decode(shorts: ShortArray, frameSize: Constants.FrameSize, fec: Int = 0): ShortArray? {
-        return decode(shorts, frameSize.v, fec)
+        return decode(codecPtr, shorts, frameSize.v, fec)
     }
 
-    private external fun decode(shorts: ShortArray, frameSize: Int, fec: Int): ShortArray?
-    external fun decoderRelease()
+    private external fun decode(codecPtr: Long, shorts: ShortArray, frameSize: Int, fec: Int): ShortArray?
 
-    //
+    fun decoderRelease() {
+        decoderRelease(codecPtr)
+    }
+
+    private external fun decoderRelease(codecPtr: Long)
+
     // Utils
-    //
+    fun convert(bytes: ByteArray): ShortArray? {
+        return convert(codecPtr, bytes)
+    }
 
-    external fun convert(bytes: ByteArray): ShortArray?
-    external fun convert(shorts: ShortArray): ByteArray?
+    private external fun convert(codecPtr: Long, bytes: ByteArray): ShortArray?
+
+    fun convert(shorts: ShortArray): ByteArray? {
+        return convert(codecPtr, shorts)
+    }
+
+    private external fun convert(codecPtr: Long, shorts: ShortArray): ByteArray?
 }
